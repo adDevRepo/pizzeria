@@ -26,9 +26,7 @@ public class ConfigRepository {
         params.put("supplement.sansGluten", "2.0");
     }
 
-    public String get(String k) {
-        return params.get(k);
-    }
+    // Suppression getter inutile
 
     public void set(String k, String v) {
         params.put(k, v);

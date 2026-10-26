@@ -2,9 +2,6 @@ package fr.tp.pizzeria.service;
 
 import fr.tp.pizzeria.model.Commande;
 import fr.tp.pizzeria.model.Pizza;
-import fr.tp.pizzeria.model.StylePizza;
-import fr.tp.pizzeria.model.TaillePizza;
-import fr.tp.pizzeria.model.TypePizza;
 import fr.tp.pizzeria.repository.ConfigRepository;
 
 import java.util.ArrayList;
@@ -18,6 +15,7 @@ public class PizzeriaService {
 
     private Pizza pdj;
     private final CommandeService commandeService = new CommandeService();
+    private final PizzaFactory pizzaFactory = new PizzaFactory();
 
     public PizzeriaService() {
         // on prépare la pizza du jour
@@ -44,34 +42,12 @@ public class PizzeriaService {
         return creer(t, s, tl, false, false);
     }
 
-    // Fabrique une pizza selon son type et son style, puis lui attribue son prix.
+    // Garde l'ancien point d'entrée et délègue la création à la fabrique.
     public Pizza creer(String t, String s, String tl, boolean ef, boolean sg) {
         if (ConfigRepository.params.get("debug").equals("true")) {
             System.out.println("creer " + t + " " + s + " " + tl);
         }
-
-        TypePizza type = TypePizza.depuisCode(t);
-        StylePizza style = StylePizza.depuisCode(s);
-        if (type == null || style == null) {
-            return null;
-        }
-
-        // L'enum du type porte le nom de la pizza et sa recette de base.
-        Pizza p = new Pizza.Builder()
-                .nom(type.getNom())
-                .type(type.getCode())
-                .taille(tl)
-                .style(style.getCode())
-                .pate(style.getPate())
-                .sauce(style.getSauce())
-                .fromage(style.getFromage(type))
-                .garnitures(new ArrayList<>(type.getGarnitures()))
-                .extraFromage(ef)
-                .sansGluten(sg)
-                .prix(0)
-                .build();
-        p.prix = calc(p);
-        return p;
+        return pizzaFactory.creer(t, s, tl, ef, sg);
     }
 
     // Reprend la pizza du jour comme modèle et en renvoie une nouvelle instance (prototype).
@@ -81,33 +57,9 @@ public class PizzeriaService {
         return x;
     }
 
-    // Calcule le prix à partir du type, de la taille et des suppléments configurés.
+    // Garde l'ancienne méthode publique et délègue le calcul à la fabrique.
     public double calc(Pizza p) {
-        // Les enums reconnaissent les valeurs prévues ; les valeurs inconnues
-        // gardent le comportement historique des codes reçus en texte.
-        TypePizza type = TypePizza.depuisCode(p.type);
-        StylePizza style = StylePizza.depuisCode(p.style);
-        TaillePizza taille = TaillePizza.depuisCode(p.taille);
-
-        String codeType = type == null ? p.type : type.getCode();
-        String codeTaille = taille == null ? p.taille : taille.getCode();
-
-        double prix = Double.parseDouble(ConfigRepository.params.getOrDefault("prix." + codeType, "0"));
-        double coefficientTaille = Double.parseDouble(
-                ConfigRepository.params.getOrDefault("taille." + codeTaille, "1.0"));
-        prix *= coefficientTaille;
-
-        if (style == StylePizza.NEW_YORKAISE) {
-            prix += Double.parseDouble(ConfigRepository.params.get("supplement.style.ny"));
-        }
-        if (p.extraFromage) {
-            prix += Double.parseDouble(ConfigRepository.params.get("supplement.fromage"));
-        }
-        if (p.sansGluten) {
-            prix += Double.parseDouble(ConfigRepository.params.get("supplement.sansGluten"));
-        }
-
-        return Math.round(prix * 100) / 100.0;
+        return pizzaFactory.calculerPrix(p);
     }
 
     // Garde l'ancien point d'entrée : le traitement est maintenant dans CommandeService.
@@ -154,6 +106,8 @@ public class PizzeriaService {
                 }
             }
         } catch (Exception e) {
+            System.err.println("Valeur invalide");
+
         }
     }
 }

@@ -15,3 +15,11 @@ Organisation du code :
 - `repository` : le stockage des données (en mémoire)
 
 Les tests décrivent le comportement actuel de l'application. Ils doivent rester verts pendant tout le TP.
+
+
+Connexion au dépot
+```
+git remote add origin https://github.com/adDevRepo/pizzeria.git
+git branch -M main
+git push -u origin main
+```

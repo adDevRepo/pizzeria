@@ -4,6 +4,7 @@ target/
 # IntelliJ IDEA
 .idea/
 *.iml
+/.idea/
 
 # Eclipse
 .classpath
@@ -25,4 +26,4 @@ Thumbs.db
 .env
 .env.*
 !.env.example
-/.idea/
+

@@ -24,25 +24,27 @@ public class CommandeService {
         c.emp = emp;
         c.fid = fid;
 
-        StringBuilder ticket = new StringBuilder();
-        ticket.append("=== ").append(ConfigRepository.params.get("nom")).append(" ===\n");
-        ticket.append("Commande n°").append(c.num).append("\n");
-
         double total = 0;
         for (int i = 0; i < l.size(); i++) {
             Pizza p = l.get(i);
             if (p != null) {
-                ticket.append("- ").append(p.nom).append(" (").append(p.taille).append(", ")
-                        .append(p.style).append(") : ")
-                        .append(String.format(Locale.ROOT, "%.2f", p.prix)).append(" EUR\n");
                 total += p.prix;
                 c.pizzas.add(p);
             }
         }
 
-        // Le seuil de fidélité se base sur le total avant remise.
+        StringBuilder ticket = new StringBuilder();
+        ticket.append("=== ").append(ConfigRepository.params.get("nom")).append(" ===\n");
+        ticket.append("Commande n°").append(c.num).append("\n");
+        for (Pizza p : c.pizzas) {
+            ticket.append("- ").append(p.nom).append(" (").append(p.taille).append(", ")
+                    .append(p.style).append(") : ")
+                    .append(String.format(Locale.ROOT, "%.2f", p.prix)).append(" EUR\n");
+        }
+
+        // Le seuil fidélité se calcule avant la remise à emporter.
         double totalAvantRemise = total;
-        if (fid == true) {
+        if (fid) {
             if (totalAvantRemise >= 50) {
                 total = total - total * 0.15;
                 ticket.append("Remise fidélité : -15%\n");
@@ -51,7 +53,7 @@ public class CommandeService {
                 ticket.append("Remise fidélité : -10%\n");
             }
         }
-        if (emp == true) {
+        if (emp) {
             total = total - total * 0.05;
             ticket.append("Remise à emporter : -5%\n");
         }
@@ -59,13 +61,13 @@ public class CommandeService {
         total = Math.round(total * 100) / 100.0;
         double tva = Math.round(total * Double.parseDouble(ConfigRepository.params.get("tva")) * 100) / 100.0;
         double ttc = Math.round((total + tva) * 100) / 100.0;
-        ticket.append("Total HT : ").append(String.format(Locale.ROOT, "%.2f", total)).append(" EUR\n");
-        ticket.append("TVA : ").append(String.format(Locale.ROOT, "%.2f", tva)).append(" EUR\n");
-        ticket.append("Total TTC : ").append(String.format(Locale.ROOT, "%.2f", ttc)).append(" EUR\n");
 
         c.ht = total;
         c.tva = tva;
         c.ttc = ttc;
+        ticket.append("Total HT : ").append(String.format(Locale.ROOT, "%.2f", total)).append(" EUR\n");
+        ticket.append("TVA : ").append(String.format(Locale.ROOT, "%.2f", tva)).append(" EUR\n");
+        ticket.append("Total TTC : ").append(String.format(Locale.ROOT, "%.2f", ttc)).append(" EUR\n");
         c.ticket = ticket.toString();
         repo.save(c);
 

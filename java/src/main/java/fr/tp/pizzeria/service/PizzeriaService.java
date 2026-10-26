@@ -2,6 +2,9 @@ package fr.tp.pizzeria.service;
 
 import fr.tp.pizzeria.model.Commande;
 import fr.tp.pizzeria.model.Pizza;
+import fr.tp.pizzeria.model.StylePizza;
+import fr.tp.pizzeria.model.TaillePizza;
+import fr.tp.pizzeria.model.TypePizza;
 import fr.tp.pizzeria.repository.ConfigRepository;
 
 import java.util.ArrayList;
@@ -22,8 +25,19 @@ public class PizzeriaService {
         g.add("jambon");
         g.add("champignons");
         g.add("artichauts");
-        pdj = new Pizza("Pizza du jour", "regina", "L", "napo", "fine", "tomate San Marzano",
-                "mozzarella di bufala", g, true, false, 12.0);
+        pdj = new Pizza.Builder()
+                .nom("Pizza du jour")
+                .type("regina")
+                .taille("L")
+                .style("napo")
+                .pate("fine")
+                .sauce("tomate San Marzano")
+                .fromage("mozzarella di bufala")
+                .garnitures(g)
+                .extraFromage(true)
+                .sansGluten(false)
+                .prix(12.0)
+                .build();
     }
 
     public Pizza creer(String t, String s, String tl) {
@@ -32,92 +46,68 @@ public class PizzeriaService {
 
     // Fabrique une pizza selon son type et son style, puis lui attribue son prix.
     public Pizza creer(String t, String s, String tl, boolean ef, boolean sg) {
-        Pizza p = null;
-        List<String> g = new ArrayList<>();
-        if (t.equals("marg")) {
-            g.add("basilic");
-            if (s.equals("napo")) {
-                p = new Pizza("Margherita", t, tl, s, "fine", "tomate San Marzano", "mozzarella di bufala", g, ef, sg, 0);
-            } else if (s.equals("ny")) {
-                p = new Pizza("Margherita", t, tl, s, "épaisse", "tomate origan", "mozzarella râpée", g, ef, sg, 0);
-            }
-        } else if (t.equals("4fro")) {
-            g.add("gorgonzola");
-            g.add("chèvre");
-            g.add("emmental");
-            if (s.equals("napo")) {
-                p = new Pizza("Quatre fromages", t, tl, s, "fine", "tomate San Marzano", "mozzarella di bufala", g, ef, sg, 0);
-            } else if (s.equals("ny")) {
-                p = new Pizza("Quatre fromages", t, tl, s, "épaisse", "tomate origan", "mozzarella râpée", g, ef, sg, 0);
-            }
-        } else if (t.equals("regina")) {
-            g.add("jambon");
-            g.add("champignons");
-            if (s.equals("napo")) {
-                p = new Pizza("Regina", t, tl, s, "fine", "tomate San Marzano", "mozzarella di bufala", g, ef, sg, 0);
-            } else if (s.equals("ny")) {
-                p = new Pizza("Regina", t, tl, s, "épaisse", "tomate origan", "mozzarella râpée", g, ef, sg, 0);
-            }
-        } else if (t.equals("vege")) {
-            g.add("poivrons");
-            g.add("champignons");
-            g.add("oignons");
-            g.add("olives");
-            if (s.equals("napo")) {
-                p = new Pizza("Végétarienne", t, tl, s, "fine", "tomate San Marzano", "mozzarella di bufala", g, ef, sg, 0);
-            } else if (s.equals("ny")) {
-                p = new Pizza("Végétarienne", t, tl, s, "épaisse", "tomate origan", "mozzarella di bufala", g, ef, sg, 0);
-            }
+        if (ConfigRepository.params.get("debug").equals("true")) {
+            System.out.println("creer " + t + " " + s + " " + tl);
         }
-        if (p != null) {
-            p.prix = calc(p);
+
+        TypePizza type = TypePizza.depuisCode(t);
+        StylePizza style = StylePizza.depuisCode(s);
+        if (type == null || style == null) {
+            return null;
         }
-        if (ConfigRepository.params.get("debug").equals("true")) System.out.println("creer " + t + " " + s + " " + tl);
+
+        // L'enum du type porte le nom de la pizza et sa recette de base.
+        Pizza p = new Pizza.Builder()
+                .nom(type.getNom())
+                .type(type.getCode())
+                .taille(tl)
+                .style(style.getCode())
+                .pate(style.getPate())
+                .sauce(style.getSauce())
+                .fromage(style.getFromage(type))
+                .garnitures(new ArrayList<>(type.getGarnitures()))
+                .extraFromage(ef)
+                .sansGluten(sg)
+                .prix(0)
+                .build();
+        p.prix = calc(p);
         return p;
     }
 
     // Reprend la pizza du jour comme modèle et en renvoie une nouvelle instance (prototype).
     public Pizza pizzaDuJour() {
         Pizza x = new Pizza(pdj.nom, pdj.type, pdj.taille, pdj.style, pdj.pate, pdj.sauce,
-                pdj.fromage, pdj.garnitures, pdj.extraFromage, pdj.sansGluten, pdj.prix);
+                pdj.fromage, new ArrayList<>(pdj.garnitures), pdj.extraFromage, pdj.sansGluten, pdj.prix);
         return x;
     }
 
-    // calcule le prix
+    // Calcule le prix à partir du type, de la taille et des suppléments configurés.
     public double calc(Pizza p) {
-        double x = 0;
-        if (p.type.equals("marg")) x = 8;
-        if (p.type.equals("4fro")) x = 11;
-        if (p.type.equals("regina")) x = 10;
-        if (p.type.equals("vege")) x = 9.5;
+        // Les enums reconnaissent les valeurs prévues ; les valeurs inconnues
+        // gardent le comportement historique des codes reçus en texte.
+        TypePizza type = TypePizza.depuisCode(p.type);
+        StylePizza style = StylePizza.depuisCode(p.style);
+        TaillePizza taille = TaillePizza.depuisCode(p.taille);
 
-        // taille
-        if (p.taille.equals("S")) {
-            x = x * 0.8;
-        } else if (p.taille.equals("L")) {
-            x = x * 1.3;
-        } else {
-            x = x * 1;
+        String codeType = type == null ? p.type : type.getCode();
+        String codeTaille = taille == null ? p.taille : taille.getCode();
+
+        double prix = Double.parseDouble(ConfigRepository.params.getOrDefault("prix." + codeType, "0"));
+        double coefficientTaille = Double.parseDouble(
+                ConfigRepository.params.getOrDefault("taille." + codeTaille, "1.0"));
+        prix *= coefficientTaille;
+
+        if (style == StylePizza.NEW_YORKAISE) {
+            prix += Double.parseDouble(ConfigRepository.params.get("supplement.style.ny"));
+        }
+        if (p.extraFromage) {
+            prix += Double.parseDouble(ConfigRepository.params.get("supplement.fromage"));
+        }
+        if (p.sansGluten) {
+            prix += Double.parseDouble(ConfigRepository.params.get("supplement.sansGluten"));
         }
 
-        // pâte épaisse plus chère
-        if (p.style.equals("ny")) x = x + 1;
-
-        if (p.extraFromage == true) x = x + 1.5;
-        if (p.sansGluten == true) x = x + 2;
-
-        x = Math.round(x * 100) / 100.0;
-        return x;
-    }
-
-    // ancienne méthode de calcul (garder au cas où)
-    private double ancienCalc(Pizza p) {
-        double x = 0;
-        if (p.type.equals("marg")) x = 7.5;
-        if (p.type.equals("4fro")) x = 10;
-        if (p.type.equals("regina")) x = 9;
-        // if (p.taille.equals("L")) x = x * 1.25;
-        return x;
+        return Math.round(prix * 100) / 100.0;
     }
 
     // Garde l'ancien point d'entrée : le traitement est maintenant dans CommandeService.
@@ -154,6 +144,15 @@ public class PizzeriaService {
                 new ConfigRepository().set("tva", tab[1]);
             }
             if (tab[0].equals("nom")) ConfigRepository.params.put("nom", tab[1]);
+
+            // Les paramètres de prix acceptent des nombres, comme la TVA.
+            if (tab[0].startsWith("prix.") || tab[0].startsWith("taille.")
+                    || tab[0].startsWith("supplement.")) {
+                if (ConfigRepository.params.containsKey(tab[0])) {
+                    Double.parseDouble(tab[1]);
+                    ConfigRepository.params.put(tab[0], tab[1]);
+                }
+            }
         } catch (Exception e) {
         }
     }

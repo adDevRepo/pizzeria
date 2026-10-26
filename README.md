@@ -1,25 +1,30 @@
 # TP Pizzeria
 
-Prérequis : JDK 17 ou plus récent, Maven.
+Application Java de démonstration pour gérer une pizzeria et ses commandes.
 
-```
-cd java
-mvn test                                                      # lancer les tests
-mvn compile exec:java -Dexec.mainClass=fr.tp.pizzeria.Main    # lancer le programme
+## Prérequis
+
+- Git
+- JDK 17 ou plus récent
+- Maven
+
+## Récupérer le projet
+
+Cloner le dépôt :
+
+```bash
+git clone https://github.com/adDevRepo/pizzeria.git
+cd pizzeria
 ```
 
-Organisation du code :
+Pour lancer les tests :
+
+```bash
+mvn test
+```
+
+## Organisation du code
 
 - `model` : les objets métier
 - `service` : la logique de la pizzeria
-- `repository` : le stockage des données (en mémoire)
-
-Les tests décrivent le comportement actuel de l'application. Ils doivent rester verts pendant tout le TP.
-
-
-Connexion au dépot
-```
-git remote add origin https://github.com/adDevRepo/pizzeria.git
-git branch -M main
-git push -u origin main
-```
+- `repository` : le stockage des données en mémoire
